@@ -19,8 +19,8 @@ Scored by Poisson log-loss of the actual 2nd-half score (both teams summed),
 paired by match.
 
 Usage:
-    python -m src.ht_final_test                 # 2025/26
-    python -m src.ht_final_test --season 2026   # season in progress (exploratory)
+    python -m src.experiments.ht_frozen_test                 # 2025/26
+    python -m src.experiments.ht_frozen_test --season 2026   # season in progress (exploratory)
 """
 
 from __future__ import annotations
@@ -29,8 +29,8 @@ import argparse
 
 import pandas as pd
 
-from .data_fetcher import load_matches
-from .ht_backtest import CAP, compare, poisson_log_loss, test_team_rows
+from ..data_fetcher import load_matches
+from .ht_leader_rule import CAP, compare, poisson_log_loss, test_team_rows
 
 # ---- frozen parameters (do not tune on 2025/26) ----------------------------
 TEST_SEASON = 2025
@@ -81,7 +81,7 @@ def run(season: int = TEST_SEASON) -> pd.DataFrame:
 
 def triggered_table(df: pd.DataFrame, ids) -> pd.DataFrame:
     """One line per fraudulent-leader match: HT state, 2H expectations and outcome."""
-    from .data_fetcher import load_matches
+    from ..data_fetcher import load_matches
     m = load_matches().set_index("match_id")
     rows = []
     for mid in ids:

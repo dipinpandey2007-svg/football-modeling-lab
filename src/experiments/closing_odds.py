@@ -22,7 +22,7 @@ xi was tuned on 2020/21-2023/24, so those seasons are in-sample for that
 one hyperparameter; 2024/25 and 2025/26 are fully held out.
 
 Usage:
-    python -m src.betting
+    python -m src.experiments.closing_odds
 """
 
 from __future__ import annotations
@@ -30,10 +30,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .backtest import log_loss, outcome_index
-from .cache import cached_walk_forward
-from .data_fetcher import load_matches, map_fd_team, read_fd_csv
-from .dixon_coles import DixonColesModel
+from ..evaluation.backtest import log_loss, outcome_index
+from ..evaluation.cache import cached_walk_forward
+from ..data_fetcher import load_matches, map_fd_team, read_fd_csv
+from ..model.dixon_coles import DixonColesModel
 
 SEASONS = [2020, 2021, 2022, 2023, 2024, 2025]
 HOLDOUT = {2024, 2025}

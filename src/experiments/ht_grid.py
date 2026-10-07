@@ -27,8 +27,8 @@ Notes
   not pinned down are reported in `uncertain_xg` (see data_fetcher).
 
 Usage:
-    python -m src.ht_discovery
-    python -m src.ht_discovery --target goals
+    python -m src.experiments.ht_grid
+    python -m src.experiments.ht_grid --target goals
 """
 
 from __future__ import annotations
@@ -38,10 +38,10 @@ import argparse
 import numpy as np
 import pandas as pd
 
-from .cache import cached_walk_forward
-from .data_fetcher import load_half_time_stats, load_matches
+from ..evaluation.cache import cached_walk_forward
+from ..data_fetcher import load_half_time_stats, load_matches
 
-TEST_SEASONS = [2020, 2021, 2022, 2023]
+TRAIN_SEASONS = [2020, 2021, 2022, 2023]
 
 GD_BINS = [-np.inf, -0.5, 0.5, np.inf]
 GD_LABELS = ["Trailing (<=-1)", "Drawing (0)", "Leading (>=+1)"]
@@ -76,16 +76,16 @@ def team_rows(target: str = "xg", xg_split: str = "hard") -> pd.DataFrame:
     """
     matches = load_matches()
     ht = load_half_time_stats().merge(matches[["match_id", "season"]], on="match_id")
-    rates = prematch_rates(matches, TEST_SEASONS, target)
+    rates = prematch_rates(matches, TRAIN_SEASONS, target)
 
     if xg_split == "soft":
         ht = ht.assign(half_1_xg=ht["half_1_xg_soft"], half_2_xg=ht["half_2_xg_soft"])
-    df = ht[ht["season"].isin(TEST_SEASONS)].merge(rates, on="match_id", how="inner")
+    df = ht[ht["season"].isin(TRAIN_SEASONS)].merge(rates, on="match_id", how="inner")
     opp = df[["match_id", "h_a", "half_1_goals", "half_1_xg"]].assign(
         h_a=lambda d: d["h_a"].map({"h": "a", "a": "h"}))
     df = df.merge(opp, on=["match_id", "h_a"], suffixes=("", "_opp"))
 
-    df["share_2h"] = df["season"].map({s: second_half_share(ht, s) for s in TEST_SEASONS})
+    df["share_2h"] = df["season"].map({s: second_half_share(ht, s) for s in TRAIN_SEASONS})
     df["pre_rate"] = np.where(df["h_a"] == "h", df["mu"], df["lam"])
     df["exp_2h_goals"] = df["share_2h"] * df["pre_rate"]
     df["resid_2h"] = df["half_2_goals"] - df["exp_2h_goals"]
@@ -135,7 +135,7 @@ def print_grid(title: str, df: pd.DataFrame, value: str = "resid_2h") -> None:
 
 
 def run(target: str = "xg") -> pd.DataFrame:
-    print(f"Walk-forward Dixon-Coles (target={target}) for seasons {TEST_SEASONS} ...")
+    print(f"Walk-forward Dixon-Coles (target={target}) for seasons {TRAIN_SEASONS} ...")
     df = team_rows(target)
     n_matches = df["match_id"].nunique()
     shares = df.groupby("season")["share_2h"].first()

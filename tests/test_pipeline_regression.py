@@ -51,15 +51,15 @@ def test_soft_split_preserves_shot_xg_totals():
 
 def test_xg_model_2024_backtest_log_loss_is_unchanged():
     """Headline held-out result of the xi tuning (reported as 0.9658)."""
-    from src.backtest import summarise
-    from src.cache import cached_walk_forward
+    from src.evaluation.backtest import summarise
+    from src.evaluation.cache import cached_walk_forward
     from src.data_fetcher import load_matches
     preds = cached_walk_forward(load_matches(), 2024, target="xg")
     assert round(summarise(preds)["log_loss"], 4) == 0.9658
 
 
 def test_cache_returns_identical_predictions(monkeypatch):
-    from src.cache import cached_walk_forward
+    from src.evaluation.cache import cached_walk_forward
     from src.data_fetcher import load_matches
     matches = load_matches()
     cached = cached_walk_forward(matches, 2026, target="xg")

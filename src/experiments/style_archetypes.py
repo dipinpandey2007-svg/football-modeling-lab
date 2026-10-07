@@ -1,5 +1,8 @@
 """
-Team style archetypes and the empirical Style Interaction Matrix S.
+Experiment 2 -- team style archetypes and the Style Interaction Matrix S.
+
+Result: FAILED. Adding S_resid to Dixon-Coles predictions made 2024/25
+predictions worse (see RESULTS.md, E2).
 
 Diagnostic script, training seasons only (2019/20 - 2023/24; 2024/25 is held
 out for the backtest).
@@ -36,32 +39,37 @@ is the interaction effect a style modifier would need to capture.
 2019/20 is excluded from S_resid because it has no prior data to fit on.
 
 Usage:
-    python -m src.archetypes
-    python -m src.archetypes --no-residual    # skip the Dixon-Coles runs
+    python -m src.experiments.style_archetypes                    # archetypes + S matrices
+    python -m src.experiments.style_archetypes --no-residual      # skip the Dixon-Coles runs
+    python -m src.experiments.style_archetypes --target goals --xi 0.0019   # PROJECT_CONTEXT 7.2 (goals S_resid)
+    python -m src.experiments.style_archetypes --compare --xi 0.0019        # 7.2 integration test, 2024/25
 """
 
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-from .data_fetcher import load_matches, load_shots, load_team_matches
+from ..data_fetcher import load_matches, load_shots, load_team_matches
+from ..evaluation.backtest import summarise, walk_forward
+from ..ingest.config import RESULTS_DIR
+from ..model.dixon_coles import DixonColesModel
 
 TRAIN_SEASONS = [2019, 2020, 2021, 2022, 2023]
 FEATURES = ["xg_density", "opp_xg_density", "deep_ratio", "directness"]
 RAW_COUNTS = ["xg", "shots", "opp_xg", "opp_shots", "deep", "opp_deep"]
 WINDOW = 10
 N_CLUSTERS = 4
+COMPARE_SEASON = 2024  # held-out season for the integration test
 RANDOM_STATE = 42
 MAX_GAP_DAYS = 150
 EPS = 1e-5
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "results" / "archetypes"
+OUT_DIR = RESULTS_DIR / "archetypes"
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +222,10 @@ def interaction_matrix(df: pd.DataFrame, value: str) -> tuple[pd.DataFrame, pd.D
 
 
 def dixon_coles_expected_gd(matches: pd.DataFrame, seasons: list[int],
-                            target: str = "xg") -> pd.DataFrame:
+                            target: str = "xg", xi: float | None = None) -> pd.DataFrame:
     """Walk-forward (out-of-sample) Dixon-Coles mu - lambda for each match."""
-    from .cache import cached_walk_forward
-    preds = [cached_walk_forward(matches, s, target=target) for s in seasons]
+    from ..evaluation.cache import cached_walk_forward
+    preds = [cached_walk_forward(matches, s, target=target, xi=xi) for s in seasons]
     p = pd.concat(preds)
     return p[["match_id"]].assign(exp_home_gd=p["pred_home_xg"] - p["pred_away_xg"])
 
@@ -232,7 +240,7 @@ def labelled_pairs(feat: pd.DataFrame) -> pd.DataFrame:
     return pairs
 
 
-def residual_matrix(pairs: pd.DataFrame, target: str = "xg"):
+def residual_matrix(pairs: pd.DataFrame, target: str = "xg", xi: float | None = None):
     """S_resid = mean(actual GD - walk-forward Dixon-Coles expected GD).
 
     `target` must match the Dixon-Coles variant the matrix will later adjust,
@@ -240,7 +248,7 @@ def residual_matrix(pairs: pd.DataFrame, target: str = "xg"):
     Returns (mean, se, n, n_matches).
     """
     resid_seasons = [s for s in TRAIN_SEASONS if s > min(TRAIN_SEASONS)]
-    exp = dixon_coles_expected_gd(load_matches(), resid_seasons, target)
+    exp = dixon_coles_expected_gd(load_matches(), resid_seasons, target, xi)
     r = pairs.merge(exp, on="match_id", how="inner")
     sign = np.where(r["h_a"] == "h", 1, -1)
     r["gd_resid"] = r["gd"] - sign * r["exp_home_gd"]
@@ -278,12 +286,12 @@ class ArchetypeTagger:
         return dict(zip(feats.index, labels.tolist()))
 
 
-def build_style_model(target: str = "xg") -> tuple[ArchetypeTagger, pd.DataFrame]:
+def build_style_model(target: str = "xg", xi: float | None = None) -> tuple[ArchetypeTagger, pd.DataFrame]:
     """Fit archetypes + S_resid on training seasons; return (tagger, S_resid)."""
     feat = training_features().dropna(subset=FEATURES).copy()
     scaler, km, relabel = fit_archetypes(feat)
     feat["archetype"] = assign_archetypes(feat, scaler, km, relabel)
-    s_resid = residual_matrix(labelled_pairs(feat), target)[0]
+    s_resid = residual_matrix(labelled_pairs(feat), target, xi)[0]
     return ArchetypeTagger(scaler, km, relabel), s_resid
 
 
@@ -299,7 +307,7 @@ def format_matrix(mean: pd.DataFrame, se: pd.DataFrame, n: pd.DataFrame) -> pd.D
 # Main
 # ---------------------------------------------------------------------------
 
-def run(residual: bool = True, target: str = "xg") -> dict:
+def run(residual: bool = True, target: str = "xg", xi: float | None = None) -> dict:
     tm = training_features()
     feat = tm.dropna(subset=FEATURES).copy()
     print(f"Team-matches: {len(tm)} total, {len(feat)} with a full {WINDOW}-match window "
@@ -341,7 +349,7 @@ def run(residual: bool = True, target: str = "xg") -> dict:
 
     if residual:
         print(f"Running walk-forward Dixon-Coles (target={target}) for 2020-2023 ...")
-        *s_res, n_matches = residual_matrix(pairs, target)
+        *s_res, n_matches = residual_matrix(pairs, target, xi)
         print(f"=== S_resid: mean (actual GD - Dixon-Coles[{target}] expected GD), "
               f"{n_matches} matches ===")
         print(format_matrix(*s_res).to_string(), "\n")
@@ -358,11 +366,68 @@ def run(residual: bool = True, target: str = "xg") -> dict:
     return results
 
 
+def compare_style(matches: pd.DataFrame, xi: float) -> None:
+    """Walk-forward 2024/25: xG Dixon-Coles vs the same model + S_resid style shift.
+
+    Archetypes and S_resid are fitted on 2019/20-2023/24 only. Differences are
+    paired by match, so their standard errors are reported alongside.
+    """
+    print("Fitting archetypes and S_resid (xG Dixon-Coles residuals, 2020-2023) ...")
+    tagger, s_resid = build_style_model(target="xg", xi=xi)
+    print("S_resid (row = home archetype, col = away archetype):")
+    print(s_resid.round(3).to_string(), "\n")
+
+    runs = {
+        "baseline_xg": dict(),
+        "style_symmetric": dict(style_matrix=s_resid, style_split="symmetric"),
+        "style_home_only": dict(style_matrix=s_resid, style_split="home"),
+    }
+    RESULTS_DIR.mkdir(exist_ok=True)
+    preds = {}
+    for name, kw in runs.items():
+        print(f"Walk-forward {name} ...")
+        preds[name] = walk_forward(
+            matches, COMPARE_SEASON, verbose=False,
+            model_factory=lambda kw=kw: DixonColesModel(xi=xi, target="xg", **kw),
+            cluster_fn=tagger.clusters_as_of)
+        preds[name].to_csv(RESULTS_DIR / f"predictions_{name}.csv", index=False)
+
+    base = preds["baseline_xg"]
+    tagged = base["home_cluster"].notna() & base["away_cluster"].notna()
+    adjusted = tagged & (base["home_cluster"] != base["away_cluster"])
+    print(f"\n{len(base)} matches: {tagged.sum()} with both teams tagged, "
+          f"{adjusted.sum()} adjusted (different archetypes)")
+
+    rows = {"previous baseline (reported)": {"log_loss": 0.9816, "rps": 0.2003}}
+    for name, p in preds.items():
+        s = summarise(p)
+        rows[name] = {"log_loss": s.log_loss, "rps": s.rps, "accuracy": s.accuracy}
+        if name != "baseline_xg":
+            for metric in ("log_loss", "rps"):
+                d = p[metric] - base[metric]
+                rows[name][f"d_{metric}"] = d.mean()
+                rows[name][f"d_{metric}_se"] = d.std() / np.sqrt(len(d))
+    table = pd.DataFrame(rows).T
+    print(f"\nOut-of-sample {COMPARE_SEASON}/{(COMPARE_SEASON + 1) % 100:02d} "
+          f"(d_* = style minus baseline, negative is better):")
+    with pd.option_context("display.float_format", "{:.4f}".format, "display.width", 200):
+        print(table.replace({np.nan: None}).to_string())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-residual", action="store_true",
                     help="skip the Dixon-Coles residual matrix")
     ap.add_argument("--target", choices=["goals", "xg"], default="xg",
                     help="Dixon-Coles variant the residuals are measured against")
+    ap.add_argument("--xi", type=float, default=None,
+                    help="Dixon-Coles time decay; default: tuned value (OPTIMAL_XI). "
+                         "The originally reported results used 0.0019.")
+    ap.add_argument("--compare", action="store_true",
+                    help=f"run the {COMPARE_SEASON}/{(COMPARE_SEASON + 1) % 100:02d} integration test "
+                         "(xG baseline vs S_resid-adjusted model)")
     args = ap.parse_args()
-    run(residual=not args.no_residual, target=args.target)
+    if args.compare:
+        compare_style(load_matches(), args.xi)
+    else:
+        run(residual=not args.no_residual, target=args.target, xi=args.xi)

@@ -27,7 +27,7 @@ two teams (= log-loss of the 2H score under independent Poissons); model
 differences are paired by match.
 
 Usage:
-    python -m src.ht_backtest
+    python -m src.experiments.ht_leader_rule
 """
 
 from __future__ import annotations
@@ -36,10 +36,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-from .cache import cached_walk_forward
-from .data_fetcher import load_half_time_stats, load_matches
-from .dixon_coles import DixonColesModel
-from .ht_discovery import second_half_share, team_rows
+from ..evaluation.cache import cached_walk_forward
+from ..data_fetcher import load_half_time_stats, load_matches
+from ..model.dixon_coles import DixonColesModel
+from .ht_grid import second_half_share, team_rows
 
 TEST_SEASON = 2024
 CAP = 0.5          # leader xG deficits at or beyond this get no modifier

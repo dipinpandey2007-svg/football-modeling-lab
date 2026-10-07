@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import approx_fprime
 
-from src.dixon_coles import OPTIMAL_XI, DixonColesModel, score_matrix
+from src.model.dixon_coles import OPTIMAL_XI, DixonColesModel, score_matrix
 
 
 def synthetic_matches(n_rounds: int = 6, seed: int = 0) -> pd.DataFrame:

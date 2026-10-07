@@ -35,26 +35,26 @@ The top candidates are frozen to results/ht_anomaly_candidates.json for a blind
 test on later seasons. Nothing from 2024/25 onwards is loaded here.
 
 Usage:
-    python -m src.explore_ht_anomalies
+    python -m src.experiments.ht_anomaly_search
 """
 
 from __future__ import annotations
 
 import itertools
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from .data_fetcher import load_matches
-from .ht_discovery import TEST_SEASONS as TRAIN_SEASONS, team_rows
+from ..data_fetcher import load_matches
+from ..ingest.config import RESULTS_DIR
+from .ht_grid import TRAIN_SEASONS, team_rows
 
 MIN_MATCHES = 30
 MAX_DIMS = 4
 TOP_K = 2
-OUT_PATH = Path(__file__).resolve().parent.parent / "results" / "ht_anomaly_candidates.json"
+OUT_PATH = RESULTS_DIR / "ht_anomaly_candidates.json"
 
 DIMENSIONS = ["venue", "ht_score", "ht_xg", "pre_match", "rest", "rest_diff"]
 SPLITS = {"A (2020-21)": [2020, 2021], "B (2022-23)": [2022, 2023]}

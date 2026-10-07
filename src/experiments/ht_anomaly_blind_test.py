@@ -16,7 +16,7 @@ Pass rule (fixed before looking at any result):
        by more than 2 standard errors (SE clustered by match)
 
 Usage:
-    python -m src.ht_anomaly_blind_test
+    python -m src.experiments.ht_anomaly_blind_test
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ import json
 import numpy as np
 import pandas as pd
 
-from .data_fetcher import load_matches
-from .explore_ht_anomalies import OUT_PATH, add_dimensions, in_state
-from .ht_backtest import poisson_log_loss, test_team_rows
+from ..data_fetcher import load_matches
+from .ht_anomaly_search import OUT_PATH, add_dimensions, in_state
+from .ht_leader_rule import poisson_log_loss, test_team_rows
 
 TEST_SEASONS = [2024, 2025, 2026]
 

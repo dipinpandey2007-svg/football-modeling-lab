@@ -9,7 +9,7 @@ stores each season's predictions under data/cache/walk_forward/, keyed by:
       matchweek span)
     - a hash of every match up to the end of that season (so new or corrected
       data invalidates the entry, including the in-progress season)
-    - a hash of the source of dixon_coles.py and backtest.py (so a code change
+    - a hash of the source of model/dixon_coles.py and evaluation/backtest.py (so a code change
       to the model or the walk-forward loop invalidates every entry)
 
 Only plain model configurations are cached; runs with a custom model factory
@@ -28,11 +28,12 @@ from pathlib import Path
 import pandas as pd
 
 from .backtest import walk_forward
-from .dixon_coles import DixonColesModel
-from .ingest.config import CACHE_DIR
+from ..model.dixon_coles import DixonColesModel
+from ..ingest.config import CACHE_DIR
 
 WALK_FORWARD_DIR = CACHE_DIR / "walk_forward"
-_CODE_FILES = [Path(__file__).resolve().parent / f for f in ("dixon_coles.py", "backtest.py")]
+_SRC = Path(__file__).resolve().parent.parent
+_CODE_FILES = [_SRC / "model" / "dixon_coles.py", _SRC / "evaluation" / "backtest.py"]
 
 
 def _code_hash() -> str:

@@ -23,7 +23,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from .dixon_coles import DixonColesModel
+from ..model.dixon_coles import DixonColesModel
 
 OUTCOMES = ("H", "D", "A")  # ordered for RPS
 

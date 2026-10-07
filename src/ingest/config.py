@@ -8,6 +8,7 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 CACHE_DIR = DATA_DIR / "cache"
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "results"
 
 # Understat labels a season by its starting year: 2019 -> 2019/20.
 DEFAULT_SEASONS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]

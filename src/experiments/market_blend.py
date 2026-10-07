@@ -26,8 +26,8 @@ Direction A: does the Dixon-Coles model carry information beyond the market?
    is the truth.
 
 Usage:
-    python -m src.market_blend
-    python -m src.market_blend --book Avg
+    python -m src.experiments.market_blend
+    python -m src.experiments.market_blend --book Avg
 """
 
 from __future__ import annotations
@@ -38,9 +38,9 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from .backtest import log_loss, outcome_index
-from .betting import model_predictions
-from .data_fetcher import load_matches, map_fd_team, read_fd_csv
+from ..evaluation.backtest import log_loss, outcome_index
+from .closing_odds import model_predictions
+from ..data_fetcher import load_matches, map_fd_team, read_fd_csv
 
 TRAIN = [2020, 2021, 2022, 2023]
 TEST = [2024, 2025, 2026]

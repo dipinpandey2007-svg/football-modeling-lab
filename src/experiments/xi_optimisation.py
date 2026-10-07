@@ -13,8 +13,8 @@ best xi are paired by match, with standard errors, to show how sharply the
 optimum is identified. The 2024/25 test season is never touched.
 
 Usage:
-    python -m src.optimize_xi                    # both targets, coarse grid
-    python -m src.optimize_xi --target xg --step 0.0001
+    python -m src.experiments.xi_optimisation                    # both targets, coarse grid
+    python -m src.experiments.xi_optimisation --target xg --step 0.0001
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-from .cache import cached_walk_forward
-from .data_fetcher import load_matches
+from ..evaluation.cache import cached_walk_forward
+from ..data_fetcher import load_matches
 
 PREVIOUS_XI = 0.0019  # hand-picked default before this search
 
