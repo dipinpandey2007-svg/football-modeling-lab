@@ -49,8 +49,6 @@ from .ingest.storage import (load_half_time_stats, load_ht_scores, load_matches,
 from .ingest.understat_api import (MATCH_COLUMNS, fetch_season_results, fetch_season_shots,
                                    fetch_season_teams, results_to_frame, teams_to_frame)
 
-_goal_side = goal_side  # backwards-compatible alias
-
 # Public API re-exported from src.ingest (kept stable for existing imports).
 __all__ = [
     # config

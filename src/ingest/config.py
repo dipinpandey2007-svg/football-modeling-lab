@@ -15,6 +15,12 @@ DEFAULT_SEASONS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
 # Season in progress: always re-downloaded, and fixtures present in only one
 # source are skipped rather than treated as a join error.
 CURRENT_SEASON = 2026
+# Analysis cutoff (inclusive): the reported results use 2026/27 matches up to
+# this date (the first 50 matches). Analyses read data through the loaders in
+# storage.py, which drop later matches, so rebuilding the data later in the
+# season does not change the reported numbers. Override with the environment
+# variable EPL_ANALYSIS_CUTOFF=YYYY-MM-DD, or EPL_ANALYSIS_CUTOFF=none to disable.
+ANALYSIS_CUTOFF = "2026-09-20"
 # Seasons whose shot minutes define the per-minute 1st-half probabilities
 # used for the soft split; frozen before 2025/26 was added.
 MINUTE_PROB_SEASONS = (2019, 2020, 2021, 2022, 2023, 2024)

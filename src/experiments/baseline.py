@@ -28,9 +28,8 @@ TEST_SEASON = 2024
 
 def get_matches(refresh: bool) -> pd.DataFrame:
     if refresh or not (PROCESSED_DIR / "matches.csv").exists():
-        matches, _ = fetch_data(DEFAULT_SEASONS, refresh=refresh)
-        return matches
-    return load_matches()
+        fetch_data(DEFAULT_SEASONS, refresh=refresh)
+    return load_matches()  # applies the analysis cutoff
 
 
 def show_prediction(matches: pd.DataFrame, home: str, away: str, target: str, xi: float) -> None:

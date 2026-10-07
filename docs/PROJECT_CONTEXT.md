@@ -2,8 +2,15 @@
 
 Complete record of a Premier League football modelling research project: goals, data,
 methodology, every experiment and its exact results, what failed and why, the current
-codebase, and open next steps. Written 2026-10-07 (project "today" date). All numbers
-below are as produced by the code; "±" values are standard errors unless stated.
+codebase, and possible future directions. Written 2026-10-07 (project "today" date). All
+numbers below are as produced by the code; "±" values are standard errors unless stated.
+
+> **Finalization note.** This log was written during the research; module paths in §5–§7
+> refer to the layout at that time (e.g. `src/ht_backtest.py`). After finalization the code
+> lives in `src/model/`, `src/evaluation/` and `src/experiments/` — see §9 for the mapping.
+> Numbers are unchanged; [RESULTS.md](../RESULTS.md) is the compact per-experiment record and
+> `python -m pytest -m reported` re-checks the headline values. Since finalization, analyses
+> use 2026/27 matches only up to 2026-09-20 (the data the results below were computed on).
 
 ---
 
@@ -32,10 +39,9 @@ below are as produced by the code; "±" values are standard errors unless stated
   - Market blend test: model adds **no significant information beyond the opening line**
     (model weight +0.085 ± 0.163). Model disagreement weakly predicts open→close line moves
     (slope z ≈ 4) but closing-line value is still negative after the margin.
-- **Current state:** repo under git, data layer refactored into `src/ingest/`, disk cache
-  for walk-forward predictions, 23 passing tests. Recommended next milestone (not started):
-  a pre-registered lower-league efficiency scan (Championship, League One/Two, National
-  League, Scottish leagues) using the existing `market_blend` test.
+- **Final state:** the research ends here. No robust half-time predictive signal was
+  established and no betting edge is claimed. Repository finalized (see §9). A lower-league
+  efficiency scan was considered as a follow-up but is outside the final scope (§10).
 
 ---
 
@@ -281,7 +287,9 @@ Model for home team h vs away team a:
   effects look smaller but was itself biased (removed early-2H goals); exact HT scores
   restored the original picture.
 
-### 7.4 Half-time grid backtest on 2024/25 (ξ = 0.0019)
+### 7.4 Half-time grid backtest on 2024/25 (ξ = 0.0019) — historical, superseded
+*The implementation of this step was replaced by the final capped rule (§7.7) before the
+project was under version control and is not retained; these numbers are historical.*
 - Naive 2H expectation = 54.9% × pre-match rate. All 380 matches (2H Poisson LL per match):
   naive 2.3065; grid 2.3071 (+0.0006 ± 0.0064); empirical-Bayes shrunk grid 2.3064
   (τ = 0.062).
@@ -291,7 +299,8 @@ Model for home team h vs away team a:
   **−0.092 ± 0.033**. "Leading & Dominating" (133) realised −0.176 vs +0.104 → worse.
 - Calibration problem found: 2024/25 actual 2H goals 0.786/team vs naive 0.878.
 
-### 7.5 Continuous "Fraudulent Leader" slope (ξ = 0.0019)
+### 7.5 Continuous "Fraudulent Leader" slope (ξ = 0.0019) — historical, superseded
+*Implementation not retained (replaced by §7.7); these numbers are historical.*
 - Calibration ratio r = Σ actual 2H goals / Σ pre-match rate on training = 0.5575
   (home 0.5541, away 0.5614); raw share 0.5492.
 - Linear slope through origin on leaders behind on HT xG: β_L = −0.0897 ± 0.1105 (n = 183);
@@ -449,91 +458,83 @@ Model for home team h vs away team a:
 
 ---
 
-## 9. Codebase (current, after refactor)
+## 9. Codebase (final layout)
 
 ```
-main.py                     Entry: 2024/25 backtest (goals + xG), --predict HOME AWAY,
-                            --style (archetype comparison), --xi, --refresh
-requirements.txt            numpy, pandas, scipy, scikit-learn, aiohttp, bs4, pytest, pyflakes
-                            (+ understat installed with --no-deps)
-pytest.ini                  pythonpath=., testpaths=tests
+README.md, RESULTS.md, LICENSE, requirements.txt, pytest.ini
+docs/DATA.md, docs/PROJECT_CONTEXT.md
+data/MANIFEST.sha256              SHA-256 of the raw data used (data itself git-ignored)
+results/frozen/ht_anomaly_candidates.json   frozen blind-test candidates (immutable, tested)
 src/
-  data_fetcher.py           Orchestrator: downloads all sources, writes processed CSVs,
-                            prints half-split diagnostics; re-exports ingest API (__all__)
-  ingest/config.py          Paths, DEFAULT_SEASONS 2019–2026, CURRENT_SEASON=2026,
-                            MINUTE_PROB_SEASONS 2019–2024, LEAGUE="epl", FD_LEAGUE="E0"
-  ingest/storage.py         Atomic JSON writes, retry helper, load_matches/shots/
-                            team_matches/half_time_stats/ht_scores
-  ingest/understat_api.py   Understat fetchers, results_to_frame, teams_to_frame
-  ingest/football_data.py   FD fetcher (league param), aliases, map_fd_team, fd_to_frame
-                            (validated join), read_fd_csv
-  ingest/halves.py          drop_boundary, feasible_boundaries, first_half_minute_probs,
-                            boundary_posterior, assign_halves, goal_side, shots_to_frame,
-                            half_split_metrics, half_split_diagnostics
-  dixon_coles.py            DixonColesModel, score_matrix, tau, OPTIMAL_XI
-  backtest.py               walk_forward, log_loss, rps, baseline_scores, summarise
-  cache.py                  cached_walk_forward (disk cache keyed by season, settings,
-                            data hash, model/backtest source hash); EPL_NO_CACHE=1;
-                            python -m src.cache [--clear]
-  optimize_xi.py            ξ grid search
-  archetypes.py             Style features, KMeans archetypes, S matrices, ArchetypeTagger
-  ht_discovery.py           12-cell half-time grid (hard/soft xG split)
-  ht_backtest.py            Half-time backtest: naive vs capped leader/trailer (+ linear)
-  ht_final_test.py          Frozen test (--season 2025 default; 2026 exploratory)
-  betting.py                Value betting vs closing odds, flat + quarter-Kelly
-  market_blend.py           Conditional-logit market blend, line movement, CLV (--book B365|Avg)
-  explore_ht_anomalies.py   Multi-dimensional half-time state search + candidate freezing
-  ht_anomaly_blind_test.py  Blind test of frozen candidates
-tests/
-  test_halves.py            Synthetic tests of half-time inference, own goals
-  test_dixon_coles.py       Gradient check, constraint, ordering recovery, ξ defaults
-  test_pipeline_regression.py  380 matches/season, HT goals = football-data, HT+2H = FT,
-                            soft split preserves xG, 2024/25 xG LL = 0.9658, cache = fresh
-results/ht_anomaly_candidates.json   Frozen pre-registration (tracked in git)
+  data_fetcher.py                 builds data/processed; re-exports the ingest API
+  ingest/config.py                paths, seasons, CURRENT_SEASON=2026, ANALYSIS_CUTOFF=2026-09-20,
+                                  MINUTE_PROB_SEASONS 2019–2024
+  ingest/storage.py               atomic writes, retries, cutoff-aware table loaders
+  ingest/understat_api.py         Understat downloads and table builders
+  ingest/football_data.py         football-data downloads, name map, validated join, read_fd_csv
+  ingest/halves.py                half-time boundary inference, shot table, per-half stats
+  ingest/manifest.py              write/verify the raw-data checksum manifest
+  model/dixon_coles.py            DixonColesModel, score_matrix, OPTIMAL_XI
+  evaluation/backtest.py          walk_forward, log_loss, rps, baseline_scores, summarise
+  evaluation/cache.py             cached_walk_forward (EPL_NO_CACHE=1 disables)
+  experiments/                    one module per experiment (E1–E10, see RESULTS.md)
+tests/                            unit, protection and end-to-end reported-result tests
 ```
-- Refactor verification: rebuilt processed CSVs byte-identical; stdout of all 11 analysis
-  scripts identical (cold and warm cache); 23 tests pass (~2 s); pyflakes clean.
-- Cache speedup: per script 18–26 s → 1.5 s warm; full 11-script suite 52 s cold / 28 s warm.
+
+Module mapping from the research-time layout used in §5–§7:
+
+| Research-time path | Final path | RESULTS.md |
+|---|---|---|
+| `main.py` (backtest) | `src/experiments/baseline.py` | E1 |
+| `src/optimize_xi.py` | `src/experiments/xi_optimisation.py` | E2 |
+| `src/archetypes.py`, `main.py --style` | `src/experiments/style_archetypes.py` (`--compare`) | E3 |
+| `src/ht_discovery.py` | `src/experiments/ht_grid.py` | E4 |
+| `src/ht_backtest.py` | `src/experiments/ht_leader_rule.py` | E5 |
+| `src/ht_final_test.py` | `src/experiments/ht_frozen_test.py` | E6 |
+| `src/explore_ht_anomalies.py` | `src/experiments/ht_anomaly_search.py` | E7 |
+| `src/ht_anomaly_blind_test.py` | `src/experiments/ht_anomaly_blind_test.py` | E8 |
+| `src/betting.py` | `src/experiments/closing_odds.py` | E9 |
+| `src/market_blend.py` | `src/experiments/market_blend.py` | E10 |
+| `src/dixon_coles.py`, `src/backtest.py`, `src/cache.py` | `src/model/`, `src/evaluation/` | – |
+
+Results computed with ξ = 0.0019 (§7.1–7.3) are reproduced with `--xi 0.0019`
+(`baseline`, `style_archetypes`, `ht_grid`). §7.4–7.5 are historical (code not retained).
 
 Commands:
 ```
-.venv\Scripts\python -m src.data_fetcher          # rebuild data (+ diagnostics)
-.venv\Scripts\python main.py                      # 2024/25 backtest
-.venv\Scripts\python -m src.optimize_xi --target xg --start 0.004 --stop 0.0055 --step 0.0001
-.venv\Scripts\python -m src.market_blend [--book Avg]
-.venv\Scripts\python -m src.ht_final_test --season 2026
-.venv\Scripts\python -m pytest
+python -m src.data_fetcher                                   # rebuild data (+ diagnostics)
+python -m src.ingest.manifest                                # check raw data vs manifest
+python -m src.experiments.baseline                           # E1/E2 headline, 2024/25
+python -m src.experiments.xi_optimisation --target xg --start 0.004 --stop 0.0055 --step 0.0001
+python -m src.experiments.market_blend [--book Avg]
+python -m src.experiments.ht_frozen_test [--season 2026]
+python -m pytest -m "not reported"                           # fast tests
+python -m pytest -m reported                                 # re-run experiments, check numbers
 ```
 
 ---
 
-## 10. Strategy discussion so far
+## 10. Strategy discussion and possible future directions — not pursued
 
-Critique: pipeline and research discipline are strong; the pre-match model is improved but
-still below market accuracy; half-time work showed no signal vs our own baseline (not vs
-in-play prices); level bias unresolved; team-level features only; one league, one xG provider.
+Critique at the end of the research: pipeline and research discipline are strong; the
+pre-match model is improved but still below market accuracy; half-time work showed no signal
+vs the project's own baseline (not tested against in-play prices); level bias unresolved;
+team-level features only; one league, one xG provider.
 
-Three directions considered:
-- **A. Market-anchored model / line movement** — done (§7.11): no usable edge in EPL.
+Directions that were discussed:
+- **A. Market-anchored model / line movement** — carried out as E10 (§7.11): no usable
+  incremental information in the EPL.
 - **B. Player-level / availability features** (Understat rosters: minutes, xG, xA, xGChain;
-  rest/congestion; manager changes; injuries need a new source) — risk: market prices
-  lineups within minutes; reconstructing pre-announcement information without leakage is hard;
-  costly to build.
-- **C. Totals / Asian handicap markets** (lower margins; Poisson model's natural output) —
+  rest/congestion; manager changes; injuries would need a new source) — risk: the market prices
+  lineups within minutes; reconstructing pre-announcement information without leakage is hard.
+- **C. Totals / Asian handicap markets** (lower margins; the Poisson model's natural output) —
   risk: requires fixing the goal-level bias first; sharp markets.
-- Also discussed: pivot to inefficient secondary leagues vs player micro-features vs
-  financial time series. Comparison: lower leagues reuse ~80% of the code and can be tested
-  in days but have higher margins (6.3–9.1%), no free xG (use goals + shots-on-target proxy),
-  lower stake limits; player features are weeks–months and tested in the most efficient
-  league; finance reuses methodology only.
+- Also discussed: secondary leagues vs player micro-features vs financial time series. Lower
+  leagues would reuse most of the code but carry higher margins (Bet365 closing 6.3–9.1% vs
+  5.6% EPL), have no free xG, and lower stake limits.
 
-**Recommended next milestone (not started): lower-league efficiency scan.**
-1. Generalise ingestion by league code (E1, E2, E3, EC, SC0, SC1).
-2. Dixon-Coles target blending goals with shots-on-target as an xG proxy.
-3. Tune ξ per league on 2019/20–2022/23 with `optimize_xi`.
-4. Pre-registered `market_blend` test per league: fit 2019/20–2022/23, score 2023/24–2025/26.
-   Proceed only if model weight > 2 SE, blend beats raw opening line by > 2 SE, and model
-   picks have positive CLV vs Pinnacle close; require ~2.6 SE (Bonferroni-style) given six
-   leagues. If a league passes → player-level features there + stake-limit realism. If all
-   fail → team-level ratings don't beat football 1X2 within reach; pivot, carrying the
-   methodology.
+**Possible future directions — not pursued.** A pre-registered lower-league efficiency scan
+(Championship, League One/Two, National League, Scottish leagues; goals + shots-on-target model;
+the E10 blend test per league with a multiple-testing-adjusted pass rule) was considered as a
+follow-up. It is **outside the final scope** of this project and has not been implemented. The
+research ends with the results in §7.

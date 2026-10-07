@@ -1,9 +1,11 @@
 """
-Blind out-of-sample test of the frozen half-time anomaly candidates.
+Experiment 8 -- blind out-of-sample test of the frozen half-time anomaly candidates.
 
-Reads results/ht_anomaly_candidates.json (written by explore_ht_anomalies from
-2020/21-2023/24 only) and tests each candidate on 2024/25, 2025/26 and
-2026/27-to-date. Nothing is re-estimated except the pre-match Dixon-Coles
+Result: both candidates FAILED (RESULTS.md, E8).
+
+Reads the frozen record results/frozen/ht_anomaly_candidates.json (selected by
+ht_anomaly_search from 2020/21-2023/24 only) and tests each candidate on
+2024/25, 2025/26 and 2026/27 up to the analysis cutoff (2026-09-20). Nothing is re-estimated except the pre-match Dixon-Coles
 ratings, which are refitted walk-forward before each matchweek as usual.
 
 For a team row in a candidate state:
@@ -27,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 from ..data_fetcher import load_matches
-from .ht_anomaly_search import OUT_PATH, add_dimensions, in_state
+from .ht_anomaly_search import FROZEN_PATH, add_dimensions, in_state
 from .ht_leader_rule import poisson_log_loss, test_team_rows
 
 TEST_SEASONS = [2024, 2025, 2026]
@@ -46,7 +48,7 @@ def cluster_mean_se(values: pd.Series, match_ids: pd.Series) -> tuple[float, flo
 def run() -> None:
     pd.set_option("display.width", 220)
     pd.set_option("display.float_format", "{:.4f}".format)
-    frozen = json.loads(OUT_PATH.read_text())
+    frozen = json.loads(FROZEN_PATH.read_text())
     r = frozen["r_goals"]
     print(f"Frozen from {frozen['train_seasons']}: r_goals = {r:.4f}, "
           f"{len(frozen['candidates'])} candidates")

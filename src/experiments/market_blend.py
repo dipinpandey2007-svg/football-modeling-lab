@@ -1,5 +1,8 @@
 """
-Direction A: does the Dixon-Coles model carry information beyond the market?
+Experiment 10 -- does the Dixon-Coles model carry information beyond the opening market?
+
+Result: NO SIGNIFICANT INCREMENTAL INFORMATION (RESULTS.md, E10). The test
+seasons include 2026/27 up to the analysis cutoff (2026-09-20).
 
 1. Blend test (conditional logit over the three 1X2 outcomes)
 

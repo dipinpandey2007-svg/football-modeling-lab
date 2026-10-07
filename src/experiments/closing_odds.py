@@ -1,5 +1,8 @@
 """
-Does the pre-match Dixon-Coles model find value against bookmaker closing odds?
+Experiment 9 -- does the pre-match Dixon-Coles model find value against bookmaker closing odds?
+
+Result: NO EDGE. The model is less accurate than margin-free closing odds and
+value bets lose money (RESULTS.md, E9).
 
 Pipeline
 --------

@@ -1,8 +1,8 @@
 """
-Experiment 2 -- team style archetypes and the Style Interaction Matrix S.
+Experiment 3 -- team style archetypes and the Style Interaction Matrix S.
 
 Result: FAILED. Adding S_resid to Dixon-Coles predictions made 2024/25
-predictions worse (see RESULTS.md, E2).
+predictions worse (see RESULTS.md, E3).
 
 Diagnostic script, training seasons only (2019/20 - 2023/24; 2024/25 is held
 out for the backtest).

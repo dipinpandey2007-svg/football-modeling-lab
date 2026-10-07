@@ -1,5 +1,13 @@
 """
-Half-time model backtest on 2024/25 (out-of-sample).
+Experiment 5 -- half-time "Fraudulent Leader" rules, backtest on 2024/25.
+
+Status: SUPERSEDED. This is the final (capped step-function) version of the
+leader rule. 2024/25 had already been examined for this effect, so its
+improvement here is not independent evidence; the rule failed the frozen
+2025/26 test of Experiment 6 (RESULTS.md, E5). Two earlier variants -- the
+12-cell grid backtest and a continuous linear slope -- are reported in
+PROJECT_CONTEXT 7.4-7.5 but their code was replaced by this version and is
+not retained.
 
 At half-time, each team's expected 2nd-half goals are
 

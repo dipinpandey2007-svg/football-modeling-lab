@@ -1,5 +1,8 @@
 """
-Frozen out-of-sample test of the half-time model on 2025/26.
+Experiment 6 -- frozen out-of-sample test of the half-time model on 2025/26.
+
+Result: FAILED (RESULTS.md, E6). --season 2026 is an exploratory check on
+2026/27 matches up to the analysis cutoff (2026-09-20), not a test.
 
 Every parameter below was fixed before any 2025/26 data was loaded:
 xi chosen by optimize_xi on 2020/21-2023/24; r, the leader/trailer

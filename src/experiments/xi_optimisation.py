@@ -1,5 +1,9 @@
 """
-Grid search for the Dixon-Coles time-decay rate xi on the training seasons.
+Experiment 2 -- grid search for the Dixon-Coles time-decay rate xi on the training seasons.
+
+Result: CONFIRMED improvement. The tuned values (goals 0.0025, xG 0.0046) are
+the defaults in model/dixon_coles.py (OPTIMAL_XI) and improved held-out
+2024/25 log-loss (RESULTS.md, E2).
 
 For each candidate xi, run the matchweek walk-forward on 2020/21 - 2023/24
 (2019/20 is the first season of data and has no prior data to fit on, so it

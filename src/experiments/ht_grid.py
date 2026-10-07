@@ -1,5 +1,8 @@
 """
-Half-Time Discovery Grid: where does the pre-match model miss in the 2nd half?
+Experiment 4 -- Half-Time Discovery Grid: where does the pre-match model miss in the 2nd half?
+
+Exploratory, training data only. Its starred cells motivated the half-time
+rules of Experiment 5, which failed the frozen test of Experiment 6 (RESULTS.md, E4).
 
 For every team in every training match (2020/21 - 2023/24):
 
@@ -29,6 +32,7 @@ Notes
 Usage:
     python -m src.experiments.ht_grid
     python -m src.experiments.ht_grid --target goals
+    python -m src.experiments.ht_grid --xi 0.0019      # as reported in PROJECT_CONTEXT 7.3
 """
 
 from __future__ import annotations
@@ -53,10 +57,11 @@ XGD_LABELS = ["Dominated (<-0.5)", "Slightly worse (-0.5,0)",
 # Inputs
 # ---------------------------------------------------------------------------
 
-def prematch_rates(matches: pd.DataFrame, seasons: list[int], target: str) -> pd.DataFrame:
+def prematch_rates(matches: pd.DataFrame, seasons: list[int], target: str,
+                   xi: float | None = None) -> pd.DataFrame:
     """Walk-forward pre-match mu (home) and lambda (away) for each match."""
     preds = pd.concat([
-        cached_walk_forward(matches, s, target=target) for s in seasons])
+        cached_walk_forward(matches, s, target=target, xi=xi) for s in seasons])
     return preds[["match_id", "pred_home_xg", "pred_away_xg"]].rename(
         columns={"pred_home_xg": "mu", "pred_away_xg": "lam"})
 
@@ -68,7 +73,7 @@ def second_half_share(ht: pd.DataFrame, before_season: int) -> float:
     return g2 / (g1 + g2)
 
 
-def team_rows(target: str = "xg", xg_split: str = "hard") -> pd.DataFrame:
+def team_rows(target: str = "xg", xg_split: str = "hard", xi: float | None = None) -> pd.DataFrame:
     """One row per team per test match: HT state, expected and actual 2H output.
 
     xg_split : "hard" uses each shot's most-likely half for HT xG; "soft"
@@ -76,7 +81,7 @@ def team_rows(target: str = "xg", xg_split: str = "hard") -> pd.DataFrame:
     """
     matches = load_matches()
     ht = load_half_time_stats().merge(matches[["match_id", "season"]], on="match_id")
-    rates = prematch_rates(matches, TRAIN_SEASONS, target)
+    rates = prematch_rates(matches, TRAIN_SEASONS, target, xi)
 
     if xg_split == "soft":
         ht = ht.assign(half_1_xg=ht["half_1_xg_soft"], half_2_xg=ht["half_2_xg_soft"])
@@ -134,9 +139,9 @@ def print_grid(title: str, df: pd.DataFrame, value: str = "resid_2h") -> None:
     print()
 
 
-def run(target: str = "xg") -> pd.DataFrame:
+def run(target: str = "xg", xi: float | None = None) -> pd.DataFrame:
     print(f"Walk-forward Dixon-Coles (target={target}) for seasons {TRAIN_SEASONS} ...")
-    df = team_rows(target)
+    df = team_rows(target, xi=xi)
     n_matches = df["match_id"].nunique()
     shares = df.groupby("season")["share_2h"].first()
 
@@ -150,7 +155,7 @@ def run(target: str = "xg") -> pd.DataFrame:
     print("Cells: mean 2H goal residual per team (SE) n=team-rows;  * = |mean| > 2 SE\n")
     print_grid("2nd-half GOAL residual (actual - expected); HT xG = most-likely half per shot", df)
 
-    soft = team_rows(target, xg_split="soft")
+    soft = team_rows(target, xg_split="soft", xi=xi)
     moved = (soft["xgd_state"].to_numpy() != df["xgd_state"].to_numpy()).sum()
     print_grid(f"Same, HT xG = soft (probability-weighted) split  "
                f"[{moved} of {len(df)} team-rows change xG bucket]", soft)
@@ -166,4 +171,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", choices=["goals", "xg"], default="xg",
                     help="Dixon-Coles variant providing pre-match mu/lambda")
-    run(ap.parse_args().target)
+    ap.add_argument("--xi", type=float, default=None,
+                    help="Dixon-Coles time decay; default: tuned value (OPTIMAL_XI). "
+                         "The originally reported grid used 0.0019.")
+    args = ap.parse_args()
+    run(args.target, args.xi)

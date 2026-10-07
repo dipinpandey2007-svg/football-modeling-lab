@@ -1,5 +1,7 @@
 """
-Exploratory search for multi-variable half-time anomalies (training data only).
+Experiment 7 -- exploratory search for multi-variable half-time anomalies (training data only).
+
+Result: the two frozen candidates FAILED the blind test (RESULTS.md, E7-E8).
 
 Unit: one team in one match, 2020/21 - 2023/24 (2019/20 only seeds the
 walk-forward). Each row is described by six categorical half-time dimensions:
@@ -31,8 +33,12 @@ Guards against data-mining false positives:
   - ranking by the weaker of the two half-sample z-scores, then removing
     candidates that share > 50% of their matches with a higher-ranked one
 
-The top candidates are frozen to results/ht_anomaly_candidates.json for a blind
-test on later seasons. Nothing from 2024/25 onwards is loaded here.
+The candidates selected for the blind test are preserved, unchanged, in
+results/frozen/ht_anomaly_candidates.json (tracked in git; never written by
+code). Re-running this search writes its selection to
+results/generated/ht_anomaly_candidates.json (git-ignored) instead, so a rerun
+can be compared with the frozen record but can never replace it.
+Nothing from 2024/25 onwards is loaded here.
 
 Usage:
     python -m src.experiments.ht_anomaly_search
@@ -54,7 +60,11 @@ from .ht_grid import TRAIN_SEASONS, team_rows
 MIN_MATCHES = 30
 MAX_DIMS = 4
 TOP_K = 2
-OUT_PATH = RESULTS_DIR / "ht_anomaly_candidates.json"
+# Immutable pre-registration record used by the blind test (read-only).
+FROZEN_PATH = RESULTS_DIR / "frozen" / "ht_anomaly_candidates.json"
+# Where a re-run of this search writes its selection.
+OUT_PATH = RESULTS_DIR / "generated" / "ht_anomaly_candidates.json"
+assert FROZEN_PATH.parent != OUT_PATH.parent
 
 DIMENSIONS = ["venue", "ht_score", "ht_xg", "pre_match", "rest", "rest_diff"]
 SPLITS = {"A (2020-21)": [2020, 2021], "B (2022-23)": [2022, 2023]}
@@ -257,7 +267,9 @@ def run() -> pd.DataFrame:
               f"same sign in {r.seasons_same_sign}/4 seasons")
         print(f"    multiple testing: BH q = {r.q_bh:.3f}, Bonferroni p = {r.p_bonferroni:.3f}")
 
-    OUT_PATH.parent.mkdir(exist_ok=True)
+    if OUT_PATH.resolve().parent == FROZEN_PATH.resolve().parent:
+        raise RuntimeError("refusing to write into the frozen results directory")
+    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     frozen = [{
         "rank": i, "state": r.state, "conditions": dict(zip(r.dims, r.values)),
         "train_effect_goals": round(r.effect, 4), "train_se": round(r.se, 4),
@@ -267,7 +279,8 @@ def run() -> pd.DataFrame:
     OUT_PATH.write_text(json.dumps({
         "train_seasons": TRAIN_SEASONS, "r_goals": df.attrs["r_goals"], "r_xg": df.attrs["r_xg"],
         "n_states_tested": n, "candidates": frozen}, indent=2))
-    print(f"\nFrozen candidates written to {OUT_PATH}")
+    print(f"\nCandidates written to {OUT_PATH}")
+    print(f"(The frozen record used by the blind test is {FROZEN_PATH}; it is not modified.)")
     return res
 
 
