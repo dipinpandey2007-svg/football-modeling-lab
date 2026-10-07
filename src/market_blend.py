@@ -39,8 +39,8 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from .backtest import log_loss, outcome_index
-from .betting import load_closing_odds, model_predictions
-from .data_fetcher import RAW_DIR, load_matches, map_fd_team
+from .betting import model_predictions
+from .data_fetcher import load_matches, map_fd_team, read_fd_csv
 
 TRAIN = [2020, 2021, 2022, 2023]
 TEST = [2024, 2025, 2026]
@@ -53,12 +53,10 @@ OUT = ["H", "D", "A"]
 
 def load_odds(matches: pd.DataFrame, seasons: list[int], book: str) -> pd.DataFrame:
     """Opening ({book}H/D/A) and closing ({book}CH/CD/CA) odds per match_id."""
-    from io import StringIO
     known = set(matches["home_team"]) | set(matches["away_team"])
     frames = []
     for s in seasons:
-        fd = pd.read_csv(StringIO((RAW_DIR / f"fd_{s}.csv").read_text(encoding="latin-1")))
-        fd = fd.dropna(subset=["HomeTeam"])
+        fd = read_fd_csv(s)
         out = pd.DataFrame({
             "season": s,
             "home_team": [map_fd_team(t, known) for t in fd["HomeTeam"]],

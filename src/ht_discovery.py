@@ -38,9 +38,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
-from .backtest import walk_forward
+from .cache import cached_walk_forward
 from .data_fetcher import load_half_time_stats, load_matches
-from .dixon_coles import DixonColesModel
 
 TEST_SEASONS = [2020, 2021, 2022, 2023]
 
@@ -57,9 +56,7 @@ XGD_LABELS = ["Dominated (<-0.5)", "Slightly worse (-0.5,0)",
 def prematch_rates(matches: pd.DataFrame, seasons: list[int], target: str) -> pd.DataFrame:
     """Walk-forward pre-match mu (home) and lambda (away) for each match."""
     preds = pd.concat([
-        walk_forward(matches, s, verbose=False,
-                     model_factory=lambda: DixonColesModel(target=target))
-        for s in seasons])
+        cached_walk_forward(matches, s, target=target) for s in seasons])
     return preds[["match_id", "pred_home_xg", "pred_away_xg"]].rename(
         columns={"pred_home_xg": "mu", "pred_away_xg": "lam"})
 

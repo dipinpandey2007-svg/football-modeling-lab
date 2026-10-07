@@ -27,13 +27,12 @@ Usage:
 
 from __future__ import annotations
 
-from io import StringIO
-
 import numpy as np
 import pandas as pd
 
-from .backtest import log_loss, outcome_index, walk_forward
-from .data_fetcher import RAW_DIR, load_matches, map_fd_team
+from .backtest import log_loss, outcome_index
+from .cache import cached_walk_forward
+from .data_fetcher import load_matches, map_fd_team, read_fd_csv
 from .dixon_coles import DixonColesModel
 
 SEASONS = [2020, 2021, 2022, 2023, 2024, 2025]
@@ -54,8 +53,7 @@ def load_closing_odds(matches: pd.DataFrame, seasons: list[int]) -> pd.DataFrame
     known = set(matches["home_team"]) | set(matches["away_team"])
     frames = []
     for season in seasons:
-        fd = pd.read_csv(StringIO((RAW_DIR / f"fd_{season}.csv").read_text(encoding="latin-1")))
-        fd = fd.dropna(subset=["HomeTeam"])
+        fd = read_fd_csv(season)
         cols = {f"{b}{o}": f"{b}_{o}" for b in BOOKS for o in "HDA" if f"{b}{o}" in fd}
         out = fd[list(cols)].rename(columns=cols)
         out["season"] = season
@@ -68,9 +66,7 @@ def load_closing_odds(matches: pd.DataFrame, seasons: list[int]) -> pd.DataFrame
 
 
 def model_predictions(matches: pd.DataFrame, seasons: list[int]) -> pd.DataFrame:
-    preds = [walk_forward(matches, s, verbose=False,
-                          model_factory=lambda: DixonColesModel(target="xg"))
-             for s in seasons]
+    preds = [cached_walk_forward(matches, s, target="xg") for s in seasons]
     p = pd.concat(preds)
     p["season"] = p["match_id"].map(matches.set_index("match_id")["season"])
     return p

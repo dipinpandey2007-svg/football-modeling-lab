@@ -25,9 +25,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-from .backtest import walk_forward
+from .cache import cached_walk_forward
 from .data_fetcher import load_matches
-from .dixon_coles import DixonColesModel
 
 PREVIOUS_XI = 0.0019  # hand-picked default before this search
 
@@ -37,9 +36,7 @@ VALIDATION_SEASONS = [2020, 2021, 2022, 2023]
 def evaluate_xi(matches: pd.DataFrame, xi: float, target: str) -> pd.DataFrame:
     """Per-match out-of-sample losses over the validation seasons for one xi."""
     preds = pd.concat([
-        walk_forward(matches, s, verbose=False,
-                     model_factory=lambda: DixonColesModel(xi=xi, target=target))
-        for s in VALIDATION_SEASONS])
+        cached_walk_forward(matches, s, target=target, xi=xi) for s in VALIDATION_SEASONS])
     preds["poisson_ll"] = (-poisson.logpmf(preds["home_goals"], preds["pred_home_xg"])
                            - poisson.logpmf(preds["away_goals"], preds["pred_away_xg"]))
     return preds.set_index("match_id")[["poisson_ll", "log_loss", "rps"]]

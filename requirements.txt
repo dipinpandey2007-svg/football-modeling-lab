@@ -5,6 +5,9 @@ scipy>=1.13
 scikit-learn>=1.4
 aiohttp>=3.9
 beautifulsoup4>=4.12
+# development
+pytest>=8.0
+pyflakes>=3.0
 # understat 0.1.14 pins aiohttp==3.8.3 / bs4==4.11.1 plus pytest packages, and
 # aiohttp 3.8.3 does not build on Python 3.13. Install it separately with:
 #   pip install --no-deps understat==0.1.14

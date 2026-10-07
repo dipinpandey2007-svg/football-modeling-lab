@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 
-from .backtest import walk_forward
+from .cache import cached_walk_forward
 from .data_fetcher import load_half_time_stats, load_matches
 from .dixon_coles import DixonColesModel
 from .ht_discovery import second_half_share, team_rows
@@ -63,8 +63,7 @@ def add_leader_features(df: pd.DataFrame) -> pd.DataFrame:
 def test_team_rows(matches: pd.DataFrame, season: int = TEST_SEASON,
                    xi: float | None = None) -> pd.DataFrame:
     """Test-season team rows: walk-forward pre-match rate, HT state, 2H goals."""
-    preds = walk_forward(matches, season, verbose=False,
-                         model_factory=lambda: DixonColesModel(xi=xi, target="xg"))
+    preds = cached_walk_forward(matches, season, target="xg", xi=xi)
     ht = load_half_time_stats().merge(matches[["match_id", "season"]], on="match_id")
     df = ht[ht["season"] == season].merge(
         preds[["match_id", "pred_home_xg", "pred_away_xg"]], on="match_id", how="inner")

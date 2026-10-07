@@ -216,10 +216,8 @@ def interaction_matrix(df: pd.DataFrame, value: str) -> tuple[pd.DataFrame, pd.D
 def dixon_coles_expected_gd(matches: pd.DataFrame, seasons: list[int],
                             target: str = "xg") -> pd.DataFrame:
     """Walk-forward (out-of-sample) Dixon-Coles mu - lambda for each match."""
-    from .backtest import walk_forward
-    from .dixon_coles import DixonColesModel
-    preds = [walk_forward(matches, s, model_factory=lambda: DixonColesModel(target=target),
-                          verbose=False) for s in seasons]
+    from .cache import cached_walk_forward
+    preds = [cached_walk_forward(matches, s, target=target) for s in seasons]
     p = pd.concat(preds)
     return p[["match_id"]].assign(exp_home_gd=p["pred_home_xg"] - p["pred_away_xg"])
 
