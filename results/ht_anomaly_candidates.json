@@ -1,0 +1,44 @@
+{
+  "train_seasons": [
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "r_goals": 0.5524350317423381,
+  "r_xg": 0.5649789628249784,
+  "n_states_tested": 1188,
+  "candidates": [
+    {
+      "rank": 1,
+      "state": "ht_xg=dominating & pre_match=underdog & rest=normal",
+      "conditions": {
+        "ht_xg": "dominating",
+        "pre_match": "underdog",
+        "rest": "normal"
+      },
+      "train_effect_goals": 0.3746,
+      "train_se": 0.1121,
+      "train_effect_xg": 0.2358,
+      "train_n_matches": 55,
+      "bh_q": 0.1409,
+      "bonferroni_p": 0.9861
+    },
+    {
+      "rank": 2,
+      "state": "ht_score=level & pre_match=underdog & rest=normal & rest_diff=similar",
+      "conditions": {
+        "ht_score": "level",
+        "pre_match": "underdog",
+        "rest": "normal",
+        "rest_diff": "similar"
+      },
+      "train_effect_goals": 0.2032,
+      "train_se": 0.0767,
+      "train_effect_xg": 0.1433,
+      "train_n_matches": 150,
+      "bh_q": 0.4146,
+      "bonferroni_p": 1.0
+    }
+  ]
+}
